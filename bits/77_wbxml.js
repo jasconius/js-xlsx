@@ -1,7 +1,9 @@
 /* 18.2 Workbook */
 var wbnsregex = /<\w+:workbook/;
+var tagcontentsregex = />(.*?)</g;
+var tagwithcontentsregex = /<definedName[^s].+?>(.+?)<\/definedName>/g;
 function parse_wb_xml(data, opts) {
-	var wb = { AppVersion:{}, WBProps:{}, WBView:[], Sheets:[], CalcPr:{}, xmlns: "" };
+	var wb = { AppVersion:{}, WBProps:{}, WBView:[], DefinedNames:[], Sheets:[], CalcPr:{}, xmlns: "" };
 	var pass = false, xmlns = "xmlns";
 	data.match(tagregex).forEach(function xml_wb(x) {
 		var y = parsexmltag(x);
@@ -51,11 +53,11 @@ function parse_wb_xml(data, opts) {
 			case '<externalReference': break;
 
 			/* 18.2.6  definedNames CT_DefinedNames ? */
-			case '<definedNames/>': break;
-			case '<definedNames>': case '<definedNames': pass=true; break;
-			case '</definedNames>': pass=false; break;
+			case '<definedNames/>': /*y[0]; wb.DefinedNames = y;*/ break;
+			case '<definedNames>': case '<definedNames': /*delete y[0]; wb.DefinedNames = y;*/ break;
+			case '</definedNames>': /*pass=false;*/ break;
 			/* 18.2.5    definedName CT_DefinedName + */
-			case '<definedName': case '<definedName/>': case '</definedName>': break;
+			case '<definedName': delete y[0]; wb.DefinedNames.push(y); case '<definedName/>': case '</definedName>': /*console.log(x);*/ break;
 
 			/* 18.2.2  calcPr CT_CalcPr ? */
 			case '<calcPr': delete y[0]; wb.CalcPr = y; break;
@@ -107,6 +109,27 @@ function parse_wb_xml(data, opts) {
 			default: if(!pass && opts.WTF) throw 'unrecognized ' + y[0] + ' in workbook';
 		}
 	});
+	
+	var matches = data.match(tagwithcontentsregex);
+
+	if (matches !== null)
+	{
+		var progress = 0;
+
+		matches.forEach(function xml_wb2(x)
+		{
+			console.log("definedName tag... " + x);
+
+			var contents = x.match(tagcontentsregex)[0];
+
+			contents = contents.substr(1, contents.length-2);
+
+			wb.DefinedNames[progress].val = contents;
+
+			progress++;
+		});
+	}
+
 	if(XMLNS.main.indexOf(wb.xmlns) === -1) throw new Error("Unknown Namespace: " + wb.xmlns);
 
 	parse_wb_defaults(wb);
