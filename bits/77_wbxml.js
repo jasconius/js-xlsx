@@ -118,7 +118,7 @@ function parse_wb_xml(data, opts) {
 
 		matches.forEach(function xml_wb2(x)
 		{
-			console.log("definedName tag... " + x);
+			//console.log("definedName tag... " + x);
 
 			var contents = x.match(tagcontentsregex)[0];
 
